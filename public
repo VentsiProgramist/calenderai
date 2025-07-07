@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar.AI</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for consistent orange/black theme */
+        .bg-orange-main {
+            background-color: #fff7ed; /* orange-50 */
+        }
+        .bg-orange-light {
+            background-color: #ffedd5; /* orange-100 */
+        }
+        .bg-orange-medium {
+            background-color: #fed7aa; /* orange-200 */
+        }
+        .bg-orange-dark {
+            background-color: #fdba74; /* orange-300 */
+        }
+        .text-black-main {
+            color: black;
+        }
+        .border-orange-main {
+            border-color: #fdba74; /* orange-300 */
+        }
+        .border-orange-darker {
+            border-color: #c2410c; /* orange-700 */
+        }
+        .text-orange-accent {
+            color: #ea580c; /* orange-600 */
+        }
+
+        /* Button styles for orange theme */
+        .btn-orange {
+            background-image: linear-gradient(to right, #fb923c, #f97316); /* orange-400 to orange-500 */
+            color: white; /* Changed button text to white for better contrast on orange */
+            padding: 0.75rem 1.25rem;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-orange:hover {
+            background-image: linear-gradient(to right, #f97316, #ea580c); /* darker orange on hover */
+            transform: scale(1.05);
+        }
+        .btn-orange:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.75); /* orange-400 with opacity */
+        }
+        /* Input styles for orange theme */
+        .input-orange {
+            border-color: #fb923c; /* orange-400 */
+            color: black;
+        }
+        .input-orange:focus {
+            border-color: #f97316; /* orange-500 */
+            box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.5); /* orange-400 with opacity */
+        }
+
+        /* Loading Spinner CSS (still present for initial app load, but not ghost flow) */
+        .spinner {
+            border: 8px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #ea580c; /* orange-600 */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-orange-light min-h-screen flex items-center justify-center">
+
+    <div id="app-container" class="w-full max-w-4xl p-4 sm:p-8">
+        <div id="loading-view" class="min-h-screen bg-orange-light font-inter flex items-center justify-center text-2xl text-black-main">
+            Loading...
+        </div>
+
+        <div id="message-display" class="hidden mb-4 p-3 rounded-lg text-center font-medium"></div>
+
+        <div id="auth-view" class="hidden bg-white rounded-3xl shadow-2xl p-6 sm:p-10 w-full max-w-md border border-orange-dark text-center mx-auto">
+            <h1 id="auth-title" class="text-4xl font-extrabold text-black-main mb-2"></h1>
+            <p id="auth-subtitle" class="text-lg text-gray-700 mb-6"></p>
+
+            <div class="mb-4">
+                <input type="email" id="email-input" placeholder="Email Address"
+                    class="w-full p-3 border input-orange rounded-lg focus:ring-orange-500 focus:border-orange-500 transition-colors text-black-main placeholder-gray-600">
+            </div>
+            <div class="mb-6">
+                <input type="password" id="password-input" placeholder="Password"
+                    class="w-full p-3 border input-orange rounded-lg focus:ring-orange-500 focus:border-orange-500 transition-colors text-black-main placeholder-gray-600">
+            </div>
+
+            <div class="flex flex-col space-y-3 mb-6">
+                <button id="email-auth-button" class="w-full btn-orange">
+                    Login with Email
+                </button>
+                <button id="google-auth-button" class="w-full btn-orange flex items-center justify-center space-x-2">
+                    <span>Sign in with Google</span>
+                </button>
+                <button id="ghost-mode-button" class="w-full btn-orange">
+                    Continue as Ghost
+                </button>
+            </div>
+
+            <button id="toggle-auth-view" class="text-orange-accent hover:underline text-sm">
+                </button>
+        </div>
+
+        <div id="calendar-view" class="hidden bg-white rounded-3xl shadow-2xl p-6 sm:p-10 w-full max-w-4xl border border-orange-dark mx-auto">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 border-b pb-4 border-orange-main">
+                <h1 class="text-4xl font-extrabold text-black-main mb-4 sm:mb-0">
+                    Calendar.AI
+                </h1>
+                <div class="flex items-center space-x-3">
+                    <span id="user-email-display" class="text-black-main text-lg font-medium"></span>
+                    <button id="logout-button" class="btn-orange bg-orange-dark hover:bg-orange-400">
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center mb-6">
+                <button id="prev-month-button" class="p-3 rounded-full bg-orange-dark hover:bg-orange-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-black-main" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h2 id="current-month-year" class="text-3xl font-bold text-black-main"></h2>
+                <button id="next-month-button" class="p-3 rounded-full bg-orange-dark hover:bg-orange-400 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-black-main" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-7 text-center font-semibold text-black-main mb-4">
+                <div class="w-1/7">Sun</div>
+                <div class="w-1/7">Mon</div>
+                <div class="w-1/7">Tue</div>
+                <div class="w-1/7">Wed</div>
+                <div class="w-1/7">Thu</div>
+                <div class="w-1/7">Fri</div>
+                <div class="w-1/7">Sat</div>
+            </div>
+
+            <div id="calendar-grid" class="grid grid-cols-7 gap-2">
+                </div>
+
+            <div id="user-id-display" class="mt-6 p-4 bg-orange-light rounded-lg text-sm text-black-main border border-orange-dark hidden">
+                <p class="font-semibold mb-1">Your User ID (for sync):</p>
+                <p id="user-id-value" class="break-all"></p>
+                <p class="mt-2 text-gray-800 text-xs">This ID uniquely identifies your data for synchronization. Share it if you want to collaborate or sync across devices.</p>
+            </div>
+        </div>
+
+        <div id="event-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md transform transition-all duration-300 scale-100">
+                <h3 id="modal-title" class="text-2xl font-bold mb-4 text-black-main"></h3>
+                <div class="mb-4">
+                    <label for="event-title-input" class="block text-black-main text-sm font-medium mb-2">Event Title</label>
+                    <input type="text" id="event-title-input"
+                        class="w-full p-3 border input-orange rounded-lg focus:ring-orange-500 focus:border-orange-500 transition-colors text-black-main placeholder-gray-600"
+                        placeholder="e.g., Team Meeting">
+                </div>
+                <div class="mb-4">
+                    <label for="event-time-input" class="block text-black-main text-sm font-medium mb-2">Time (Optional)</label>
+                    <input type="time" id="event-time-input"
+                        class="w-full p-3 border input-orange rounded-lg focus:ring-orange-500 focus:border-orange-500 transition-colors text-black-main">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-event-button" class="px-5 py-2 bg-orange-dark text-black-main rounded-full hover:bg-orange-400 transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="add-event-button" class="px-5 py-2 btn-orange">
+                        Add Event
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="ghost-info-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md transform transition-all duration-300 scale-100">
+                <h3 class="text-2xl font-bold mb-4 text-black-main">Tell Us About Yourself!</h3>
+                <p class="text-gray-700 mb-4">Just a few details for your personalized ghost experience.</p>
+                <div class="mb-4">
+                    <label for="ghost-name-input" class="block text-black-main text-sm font-medium mb-2">Your Name</label>
+                    <input type="text" id="ghost-name-input"
+                        class="w-full p-3 border input-orange rounded-lg focus:ring-orange-500 focus:border-orange-500 transition-colors text-black-main placeholder-gray-600"
+                        placeholder="e.g., Ghosty McGhostface">
+                </div>
+                <div class="mb-4">
+                    <label for="ghost-dob-input" class="block text-black-main text-sm font-medium mb-2">Birthday</label>
+                    <input type="date" id="ghost-dob-input"
+                        class="w-full p-3 border input-orange rounded-lg focus:ring-orange-500 focus:border-orange-500 transition-colors text-black-main">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-ghost-info-button" class="px-5 py-2 bg-orange-dark text-black-main rounded-full hover:bg-orange-400 transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="ghost-info-submit-button" class="px-5 py-2 btn-orange">
+                        Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-analytics.js";
+        import {
+            getAuth,
+            signInAnonymously,
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            GoogleAuthProvider,
+            signInWithPopup,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+        import {
+            getFirestore,
+            collection,
+            addDoc,
+            onSnapshot,
+            doc,
+            setDoc,
+            getDoc
+        } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCCYfFCXeK2Bsu9BrBtDXEsVR7-IvguLIE",
+            authDomain: "calendar0ai.firebaseapp.com",
+            projectId: "calendar0ai",
+            storageBucket: "calendar0ai.firebasestorage.app",
+            messagingSenderId: "243202378976",
+            appId: "1:243202378976:web:bc209c46aa965cda0e1485",
+            measurementId: "G-1RN3NF5JQX"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app); // Initialize analytics
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Global variables for UI state
+        let currentUserId = null;
+        let currentUserEmail = '';
+        let currentMonthDate = new Date();
+        let selectedDateForModal = null;
+        let isLoginView = true; // true for login, false for signup
+        let allEvents = [];
+
+        // DOM Elements
+        const loadingView = document.getElementById('loading-view');
+        const messageDisplay = document.getElementById('message-display');
+        const authView = document.getElementById('auth-view');
+        const authTitle = document.getElementById('auth-title');
+        const authSubtitle = document.getElementById('auth-subtitle');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const emailAuthButton = document.getElementById('email-auth-button');
+        const googleAuthButton = document.getElementById('google-auth-button');
+        const ghostModeButton = document.getElementById('ghost-mode-button');
+        const toggleAuthViewButton = document.getElementById('toggle-auth-view');
+
+        const calendarView = document.getElementById('calendar-view');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const logoutButton = document.getElementById('logout-button');
+        const prevMonthButton = document.getElementById('prev-month-button');
+        const nextMonthButton = document.getElementById('next-month-button');
+        const currentMonthYearDisplay = document.getElementById('current-month-year');
+        const calendarGrid = document.getElementById('calendar-grid');
+        const userIdDisplayDiv = document.getElementById('user-id-display');
+        const userIdValueSpan = document.getElementById('user-id-value');
+
+        const eventModal = document.getElementById('event-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const eventTitleInput = document.getElementById('event-title-input');
+        const eventTimeInput = document.getElementById('event-time-input');
+        const cancelEventButton = document.getElementById('cancel-event-button');
+        const addEventButton = document.getElementById('add-event-button');
+
+        // New DOM Elements for Ghost flow
+        const ghostInfoModal = document.getElementById('ghost-info-modal');
+        const ghostNameInput = document.getElementById('ghost-name-input');
+        const ghostDobInput = document.getElementById('ghost-dob-input');
+        const ghostInfoSubmitButton = document.getElementById('ghost-info-submit-button');
+        const cancelGhostInfoButton = document.getElementById('cancel-ghost-info-button');
+
+
+        // --- Utility Functions ---
+
+        function showMessage(msg, type) {
+            messageDisplay.textContent = msg;
+            messageDisplay.classList.remove('hidden', 'bg-orange-medium', 'bg-orange-dark', 'text-black');
+            if (type === 'success') {
+                messageDisplay.classList.add('bg-orange-medium', 'text-black');
+            } else {
+                messageDisplay.classList.add('bg-orange-dark', 'text-black');
+            }
+            messageDisplay.style.display = 'block'; // Ensure it's visible
+            setTimeout(() => {
+                messageDisplay.style.display = 'none'; // Hide after timeout
+                messageDisplay.classList.add('hidden');
+            }, 3000);
+        }
+
+        function getDaysInMonth(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        function getFirstDayOfMonth(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            return new Date(year, month, 1).getDay(); // 0 for Sunday, 1 for Monday, etc.
+        }
+
+        function formatDateForDisplay(date) {
+            return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // --- UI Rendering Functions ---
+
+        function renderAuthView() {
+            loadingView.classList.add('hidden');
+            calendarView.classList.add('hidden');
+            authView.classList.remove('hidden');
+
+            if (isLoginView) {
+                authTitle.textContent = 'Welcome to Calendar.AI!';
+                authSubtitle.textContent = 'Login to your account'; // Set subtitle for login
+                emailAuthButton.textContent = 'Login with Email';
+                toggleAuthViewButton.textContent = 'Need an account? Sign Up'; // Set text for toggle button
+            } else {
+                authTitle.textContent = 'Join Calendar.AI';
+                authSubtitle.textContent = 'Create a new account'; // Set subtitle for signup
+                emailAuthButton.textContent = 'Sign Up with Email';
+                toggleAuthViewButton.textContent = 'Already have an account? Login'; // Set text for toggle button
+            }
+            emailInput.value = ''; // Clear fields when view changes
+            passwordInput.value = ''; // Clear fields when view changes
+        }
+
+        function renderCalendarView() {
+            loadingView.classList.add('hidden');
+            authView.classList.add('hidden');
+            calendarView.classList.remove('hidden');
+
+            // Determine display name based on user type
+            if (auth.currentUser && auth.currentUser.isAnonymous) {
+                // If it's a Ghost user, try to load their profile data
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const profileDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/data`);
+                getDoc(profileDocRef).then((docSnap) => {
+                    if (docSnap.exists()) {
+                        const profileData = docSnap.data();
+                        userEmailDisplay.textContent = `Welcome, ${profileData.name || 'Ghost User'}`;
+                    } else {
+                        userEmailDisplay.textContent = `Welcome, Ghost User`;
+                    }
+                }).catch(error => {
+                    console.error("Error fetching ghost profile:", error);
+                    userEmailDisplay.textContent = `Welcome, Ghost User`; // Fallback
+                });
+            } else {
+                // For email/Google users
+                userEmailDisplay.textContent = `Logged in as: ${currentUserEmail}`;
+            }
+
+            userIdValueSpan.textContent = currentUserId;
+            userIdDisplayDiv.classList.remove('hidden');
+
+            renderCalendarGrid();
+        }
+
+        function renderCalendarGrid() {
+            calendarGrid.innerHTML = ''; // Clear previous days
+            currentMonthYearDisplay.textContent = currentMonthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const totalDays = getDaysInMonth(currentMonthDate);
+            const firstDayIndex = getFirstDayOfMonth(currentMonthDate);
+
+            // Add empty cells for days before the 1st
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'w-1/7 aspect-square flex items-center justify-center';
+                calendarGrid.appendChild(emptyDiv);
+            }
+
+            // Add actual days
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDiv = document.createElement('div');
+                const currentDay = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), day);
+                const isToday = currentDay.toDateString() === new Date().toDateString();
+                const dayEvents = allEvents.filter(event => {
+                    const eventDate = new Date(event.date);
+                    return eventDate.getFullYear() === currentDay.getFullYear() &&
+                           eventDate.getMonth() === currentDay.getMonth() &&
+                           eventDate.getDate() === currentDay.getDate();
+                });
+
+                dayDiv.className = `w-1/7 aspect-square flex flex-col items-center justify-center p-1 cursor-pointer rounded-lg transition-colors duration-200
+                    ${isToday ? 'bg-orange-500 text-white shadow-md' : 'bg-orange-200 hover:bg-orange-300'}
+                    ${dayEvents.length > 0 ? 'border-2 border-orange-darker' : ''}
+                `;
+                dayDiv.innerHTML = `<span class="font-bold text-lg text-black-main">${day}</span>`;
+
+                if (dayEvents.length > 0) {
+                    const eventListDiv = document.createElement('div');
+                    eventListDiv.className = 'text-xs text-center mt-1';
+                    dayEvents.slice(0, 2).forEach(event => {
+                        const p = document.createElement('p');
+                        p.className = 'truncate text-black-main';
+                        p.textContent = `${event.title} ${event.time ? `(${event.time})` : ''}`;
+                        eventListDiv.appendChild(p);
+                    });
+                    if (dayEvents.length > 2) {
+                        const moreP = document.createElement('p');
+                        moreP.className = 'text-gray-800';
+                        moreP.textContent = `+${dayEvents.length - 2} more`;
+                        eventListDiv.appendChild(moreP);
+                    }
+                    dayDiv.appendChild(eventListDiv);
+                }
+
+                dayDiv.addEventListener('click', () => openEventModal(day));
+                calendarGrid.appendChild(dayDiv);
+            }
+        }
+
+        function openEventModal(day) {
+            selectedDateForModal = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), day);
+            modalTitle.textContent = `Add Event for ${formatDateForDisplay(selectedDateForModal)}`;
+            eventTitleInput.value = '';
+            eventTimeInput.value = '';
+            eventModal.classList.remove('hidden');
+        }
+
+        function closeEventModal() {
+            eventModal.classList.add('hidden');
+        }
+
+        // --- Event Handlers ---
+
+        async function handleGhostMode() {
+            // Show the ghost info modal instead of directly signing in
+            ghostInfoModal.classList.remove('hidden');
+            // Clear inputs in case user opened it before and closed
+            ghostNameInput.value = '';
+            ghostDobInput.value = '';
+        }
+
+        async function handleGhostInfoSubmit() {
+            const name = ghostNameInput.value.trim();
+            const dob = ghostDobInput.value; // Format:YYYY-MM-DD
+
+            if (!name || !dob) {
+                showMessage('Please enter your name and birthday.', 'error');
+                return;
+            }
+
+            ghostInfoModal.classList.add('hidden');
+
+            try {
+                const userCredential = await signInAnonymously(auth);
+                const user = userCredential.user;
+                currentUserId = user.uid; // Update global user ID
+
+                // Store ghost user profile data
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const profileDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/profile/data`);
+                await setDoc(profileDocRef, {
+                    name: name,
+                    birthday: dob,
+                    createdAt: new Date().toISOString()
+                });
+
+                showMessage('Signed in as Ghost User!', 'success');
+                // onAuthStateChanged will handle rendering calendar view
+            } catch (error) {
+                console.error("Error signing in anonymously or saving profile:", error);
+                showMessage(`Error signing in as Ghost: ${error.message}`, 'error');
+                renderAuthView(); // Go back to auth view on error
+            }
+        }
+
+        async function handleEmailAuth() {
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            if (!email || !password) {
+                showMessage('Please enter email and password.', 'error');
+                return;
+            }
+            try {
+                if (!isLoginView) { // If currently in signup view
+                    await createUserWithEmailAndPassword(auth, email, password);
+                    showMessage('Account created and logged in!', 'success');
+                } else { // If currently in login view
+                    await signInWithEmailAndPassword(auth, email, password);
+                    showMessage('Logged in successfully!', 'success');
+                }
+                emailInput.value = ''; // Clear fields on successful auth
+                passwordInput.value = ''; // Clear fields on successful auth
+            } catch (error) {
+                console.error("Email auth error:", error);
+                showMessage(`Email authentication failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function handleGoogleAuth() {
+            try {
+                const provider = new GoogleAuthProvider();
+                await signInWithPopup(auth, provider);
+                showMessage('Signed in with Google!', 'success');
+            } catch (error) {
+                console.error("Google auth error:", error);
+                if (error.code === 'auth/unauthorized-domain') {
+                    console.log("Current domain:", window.location.origin);
+                    showMessage(
+                        `Google authentication failed: Your current domain (${window.location.origin}) is not authorized in your Firebase project. Please add this domain to the 'Authorized domains' list in your Firebase Console (Authentication -> Settings).`,
+                        'error'
+                    );
+                } else {
+                    showMessage(`Google authentication failed: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await signOut(auth);
+                showMessage('Logged out successfully!', 'success');
+            } catch (error) {
+                console.error("Logout error:", error);
+                showMessage(`Error logging out: ${error.message}`, 'error');
+            }
+        }
+
+        async function handleAddEvent() {
+            const title = eventTitleInput.value;
+            const time = eventTimeInput.value;
+
+            if (!title || !selectedDateForModal || !db || !currentUserId) {
+                showMessage('Please enter an event title and select a date.', 'error');
+                return;
+            }
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const eventDate = selectedDateForModal.toISOString().split('T')[0]; // Format:YYYY-MM-DD
+            const eventData = {
+                title: title,
+                date: eventDate,
+                time: time,
+                createdAt: new Date().toISOString(),
+                userId: currentUserId
+            };
+
+            try {
+                const eventsCollectionRef = collection(db, `artifacts/${appId}/users/${currentUserId}/events`);
+                await addDoc(eventsCollectionRef, eventData);
+                showMessage('Event added successfully!', 'success');
+                closeEventModal();
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                showMessage(`Error adding event: ${e.message}`, 'error');
+            }
+        }
+
+        function goToPreviousMonth() {
+            currentMonthDate.setMonth(currentMonthDate.getMonth() - 1);
+            renderCalendarGrid();
+        }
+
+        function goToNextMonth() {
+            currentMonthDate.setMonth(currentMonthDate.getMonth() + 1);
+            renderCalendarGrid();
+        }
+
+        // --- Initial Setup and Listeners ---
+
+        // Authentication state listener
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                currentUserEmail = user.email || 'Ghost User'; // Keep 'Ghost User' for anonymous
+                renderCalendarView(); // This will now handle the name display more dynamically
+
+                // Set up Firestore listener for events
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const eventsCollectionRef = collection(db, `artifacts/${appId}/users/${currentUserId}/events`);
+                onSnapshot(eventsCollectionRef, (snapshot) => {
+                    allEvents = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    renderCalendarGrid(); // Re-render calendar with updated events
+                }, (error) => {
+                    console.error("Error fetching events:", error);
+                    showMessage(`Error fetching events: ${error.message}`, 'error');
+                });
+
+            } else {
+                currentUserId = null;
+                currentUserEmail = '';
+                allEvents = []; // Clear events
+                renderAuthView();
+            }
+        });
+
+        // Event Listeners for Auth View
+        emailAuthButton.addEventListener('click', handleEmailAuth);
+        googleAuthButton.addEventListener('click', handleGoogleAuth);
+        ghostModeButton.addEventListener('click', handleGhostMode); // Now opens the info modal
+        toggleAuthViewButton.addEventListener('click', () => {
+            isLoginView = !isLoginView;
+            renderAuthView();
+        });
+
+        // Event Listeners for Ghost Info Modal
+        ghostInfoSubmitButton.addEventListener('click', handleGhostInfoSubmit);
+        cancelGhostInfoButton.addEventListener('click', () => {
+            ghostInfoModal.classList.add('hidden');
+            emailInput.value = ''; // Clear email/pass fields as user cancelled ghost flow
+            passwordInput.value = '';
+        });
+
+
+        // Event Listeners for Calendar View
+        logoutButton.addEventListener('click', handleLogout);
+        prevMonthButton.addEventListener('click', goToPreviousMonth);
+        nextMonthButton.addEventListener('click', goToNextMonth);
+
+        // Event Listeners for Event Modal
+        cancelEventButton.addEventListener('click', closeEventModal);
+        addEventButton.addEventListener('click', handleAddEvent);
+
+        // Initial render (show loading, then auth or calendar based on state)
+        document.addEventListener('DOMContentLoaded', () => {
+            loadingView.classList.remove('hidden');
+        });
+
+    </script>
+</body>
+</html>
